@@ -129,8 +129,8 @@ export default function Home() {
 
             {/* Event ID Card */}
             <div className="glass-panel rounded-2xl p-6 space-y-2">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider">Event ID</p>
-              <div className="text-4xl font-bold text-primary">{createdCredentials.id}</div>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider">9-Digit Event ID</p>
+              <div className="text-4xl font-bold text-primary tracking-widest">{createdCredentials.id}</div>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(String(createdCredentials.id));
@@ -144,8 +144,8 @@ export default function Home() {
 
             {/* Password Card */}
             <div className="glass-panel rounded-2xl p-6 space-y-2">
-              <p className="text-sm text-muted-foreground uppercase tracking-wider">Password</p>
-              <div className="text-4xl font-bold text-accent">{createdCredentials.password}</div>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider">4-Digit Password PIN</p>
+              <div className="text-4xl font-bold text-accent tracking-[0.5em]">{createdCredentials.password}</div>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(createdCredentials.password);

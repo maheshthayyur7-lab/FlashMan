@@ -36,11 +36,20 @@ export async function registerRoutes(
         return res.status(500).json({ message: "Failed to generate unique PIN" });
       }
       
+      // Generate a unique 9-digit Event ID
+      let eventId: number;
+      let existingById = null;
+      do {
+        eventId = Math.floor(100000000 + Math.random() * 900000000);
+        existingById = await storage.getEvent(eventId);
+      } while (existingById);
+
       // Generate a host password (4 random digits)
       const password = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
       
       const event = await storage.createEvent({
         ...input,
+        id: eventId,
         pin,
         password,
       });
