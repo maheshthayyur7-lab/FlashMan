@@ -126,9 +126,22 @@ export default function HostDashboard() {
         </div>
       </header>
 
+import { MusicLibrary } from "@/components/MusicLibrary";
+
+// ... inside HostDashboard component before main return ...
+  return (
+    <div className="min-h-screen bg-background text-foreground pb-12">
+      {/* ... header ... */}
       <main className="max-w-md mx-auto px-6 pt-8 space-y-8">
+        {/* ... existing cards ... */}
         
-        {/* Permission Banner */}
+        {/* Music Sync Library */}
+        <section className="pt-4">
+          <MusicLibrary eventId={event.id} onPlayEffect={(eff) => emitEffect(eff.type, eff)} />
+        </section>
+
+        {/* Master Controls */}
+        {/* ... existing buttons ... */}
         {!hasPermission && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
