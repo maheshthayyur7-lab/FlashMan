@@ -5,15 +5,16 @@ import { useEvent } from "@/hooks/use-events";
 import { useTorch } from "@/hooks/use-torch";
 import { GlowButton } from "@/components/GlowButton";
 import { StatusIndicator } from "@/components/StatusIndicator";
-import { Zap, ZapOff, Activity, AlertCircle, StopCircle, Radio, Settings2, Share2, Copy, Users, Wifi, Lock } from "lucide-react";
+import { Zap, Activity, StopCircle, Radio, Copy, Users, Wifi, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import type { EffectType } from "@shared/schema";
+import { MusicLibrary } from "@/components/MusicLibrary";
 
 export default function HostDashboard() {
   const { id } = useParams();
-  const hostId = id; // This is now the host ID (UUID)
-  const { data: event, isLoading: eventLoading } = useEvent(hostId);
+  const hostId = id; 
+  const { data: event, isLoading: eventLoading } = useEvent(hostId as string);
   const { isConnected, latency, emitEffect, participants, lastEffect } = useSocket(event?.id || 0, 'host', event?.pin);
   const { requestPermission, hasPermission, toggle } = useTorch();
   const [, setLocation] = useLocation();
@@ -22,12 +23,10 @@ export default function HostDashboard() {
   const [activeEffect, setActiveEffect] = useState<EffectType | null>(null);
   const [strobeHz, setStrobeHz] = useState(5);
 
-  // Request flashlight permission on mount
   useEffect(() => {
     requestPermission();
   }, [requestPermission]);
 
-  // Effect Processing Logic (same as AttendeeMode)
   useEffect(() => {
     if (!lastEffect) return;
 
@@ -86,7 +85,7 @@ export default function HostDashboard() {
     setActiveEffect(type);
     
     if (type === 'STROBE') {
-      emitEffect('STROBE', { frequency: strobeHz, duration: 10000 }); // 10s default safety
+      emitEffect('STROBE', { frequency: strobeHz, duration: 10000 });
     } else {
       emitEffect(type);
     }
@@ -113,7 +112,6 @@ export default function HostDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-12">
-      {/* Header */}
       <header className="bg-white/5 border-b border-white/10 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-md mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -126,22 +124,7 @@ export default function HostDashboard() {
         </div>
       </header>
 
-import { MusicLibrary } from "@/components/MusicLibrary";
-
-// ... inside HostDashboard component before main return ...
-  return (
-    <div className="min-h-screen bg-background text-foreground pb-12">
-      {/* ... header ... */}
       <main className="max-w-md mx-auto px-6 pt-8 space-y-8">
-        {/* ... existing cards ... */}
-        
-        {/* Music Sync Library */}
-        <section className="pt-4">
-          <MusicLibrary eventId={event.id} onPlayEffect={(eff) => emitEffect(eff.type, eff)} />
-        </section>
-
-        {/* Master Controls */}
-        {/* ... existing buttons ... */}
         {!hasPermission && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -158,7 +141,6 @@ import { MusicLibrary } from "@/components/MusicLibrary";
           </motion.div>
         )}
 
-        {/* Event Info Card */}
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -166,7 +148,6 @@ import { MusicLibrary } from "@/components/MusicLibrary";
         >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-secondary" />
           
-          {/* PIN Section */}
           <div className="text-center space-y-2">
             <p className="text-muted-foreground text-sm uppercase tracking-wider font-bold">Event PIN</p>
             <div 
@@ -180,7 +161,6 @@ import { MusicLibrary } from "@/components/MusicLibrary";
             </div>
           </div>
 
-          {/* Participant Stats */}
           <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-2">
@@ -203,7 +183,10 @@ import { MusicLibrary } from "@/components/MusicLibrary";
           </div>
         </motion.div>
 
-        {/* Master Controls */}
+        <section className="pt-4">
+          <MusicLibrary eventId={event.id} onPlayEffect={(eff: any) => emitEffect(eff.type, eff)} />
+        </section>
+
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
             <span className="font-bold">LIVE CONTROLS</span>
@@ -234,7 +217,6 @@ import { MusicLibrary } from "@/components/MusicLibrary";
             </GlowButton>
           </div>
 
-          {/* Strobe Settings */}
           <AnimatePresence>
             {activeEffect === 'STROBE' && (
               <motion.div 

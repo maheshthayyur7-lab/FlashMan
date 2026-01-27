@@ -52,7 +52,7 @@ export async function registerRoutes(
         id: eventId,
         pin,
         password,
-      });
+      } as any);
       
       // Return both PIN and hostId so frontend can show both
       res.status(201).json({

@@ -1,10 +1,9 @@
-
 import { db } from "./db";
-import { events, sessions, type InsertEvent, type Event, type Session } from "@shared/schema";
+import { events, sessions, songs, type InsertEvent, type Event, type Session, type Song, type InsertSong } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
-  createEvent(event: InsertEvent): Promise<Event>;
+  createEvent(event: InsertEvent & { id?: number; pin?: string; password?: string }): Promise<Event>;
   getEventByPin(pin: string): Promise<Event | undefined>;
   getEvent(id: number): Promise<Event | undefined>;
   getEventByHostId(hostId: string): Promise<Event | undefined>;
@@ -17,18 +16,8 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // ... existing methods ...
-  async saveSong(insertSong: InsertSong): Promise<Song> {
-    const [song] = await db.insert(songs).values(insertSong).returning();
-    return song;
-  }
-
-  async getSongsByEvent(eventId: number): Promise<Song[]> {
-    return await db.select().from(songs).where(eq(songs.eventId, eventId));
-  }
-
-  async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db.insert(events).values(insertEvent).returning();
+  async createEvent(insertEvent: InsertEvent & { id?: number; pin?: string; password?: string }): Promise<Event> {
+    const [event] = await db.insert(events).values(insertEvent as any).returning();
     return event;
   }
 
@@ -56,7 +45,6 @@ export class DatabaseStorage implements IStorage {
       }).returning();
       return session;
     } catch (err) {
-      // Session already exists, update it
       const [session] = await db.update(sessions)
         .set({ isActive: true, lastHeartbeat: new Date() })
         .where(eq(sessions.id, sessionId))
@@ -84,6 +72,15 @@ export class DatabaseStorage implements IStorage {
       .from(sessions)
       .where(eq(sessions.eventId, eventId));
     return result.length;
+  }
+
+  async saveSong(insertSong: InsertSong): Promise<Song> {
+    const [song] = await db.insert(songs).values(insertSong).returning();
+    return song;
+  }
+
+  async getSongsByEvent(eventId: number): Promise<Song[]> {
+    return await db.select().from(songs).where(eq(songs.eventId, eventId));
   }
 }
 
