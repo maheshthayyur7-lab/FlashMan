@@ -38,10 +38,24 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export type Session = typeof sessions.$inferSelect;
 
-export interface ParticipantStats {
-  totalJoined: number;
-  activeNow: number;
-}
+export const songs = pgTable("songs", {
+  id: serial("id").primaryKey(),
+  eventId: integer("event_id").notNull(),
+  title: text("title").notNull(),
+  artist: text("artist"),
+  url: text("url").notNull(),
+  syncData: jsonb("sync_data").notNull(), // The "CSV" content stored as JSON timings
+  duration: integer("duration").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSongSchema = createInsertSchema(songs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Song = typeof songs.$inferSelect;
+export type InsertSong = z.infer<typeof insertSongSchema>;
 
 // === SOCKET TYPES ===
 // Effect types

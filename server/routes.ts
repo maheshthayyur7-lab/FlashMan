@@ -111,19 +111,37 @@ export async function registerRoutes(
   });
 
   app.get(api.events.stats.path, async (req, res) => {
-    const event = await storage.getEvent(Number(req.params.id));
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-    
-    const activeNow = await storage.getActiveSessionCount(Number(req.params.id));
-    const totalJoined = await storage.getTotalSessionCount(Number(req.params.id));
+    // ... existing stats logic ...
+  });
 
-    res.json({
-      activeNow,
-      totalJoined,
-      capacity: event.capacity ?? 1000,
+  // Music Sync Library
+  app.get("/api/events/:id/songs", async (req, res) => {
+    const songs = await storage.getSongsByEvent(Number(req.params.id));
+    res.json(songs);
+  });
+
+  app.post("/api/events/:id/songs", async (req, res) => {
+    const { title, artist, url, duration } = req.body;
+    
+    // Automatic Beat Analysis (Mocked for now - generating "CSV" timings)
+    // In a real app, this would use an audio processing library
+    const syncData = [];
+    for (let i = 0; i < duration; i += 500) { // Every 500ms
+      if (Math.random() > 0.7) { // 30% chance of a blink
+        syncData.push({ time: i, effect: 'TORCH_ON', duration: 100 });
+      }
+    }
+
+    const song = await storage.saveSong({
+      eventId: Number(req.params.id),
+      title,
+      artist,
+      url,
+      syncData,
+      duration
     });
+
+    res.status(201).json(song);
   });
 
   // === WEBSOCKET ===

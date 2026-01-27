@@ -12,9 +12,21 @@ export interface IStorage {
   leaveSession(sessionId: string): Promise<void>;
   getActiveSessionCount(eventId: number): Promise<number>;
   getTotalSessionCount(eventId: number): Promise<number>;
+  saveSong(song: InsertSong): Promise<Song>;
+  getSongsByEvent(eventId: number): Promise<Song[]>;
 }
 
 export class DatabaseStorage implements IStorage {
+  // ... existing methods ...
+  async saveSong(insertSong: InsertSong): Promise<Song> {
+    const [song] = await db.insert(songs).values(insertSong).returning();
+    return song;
+  }
+
+  async getSongsByEvent(eventId: number): Promise<Song[]> {
+    return await db.select().from(songs).where(eq(songs.eventId, eventId));
+  }
+
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
     const [event] = await db.insert(events).values(insertEvent).returning();
     return event;
