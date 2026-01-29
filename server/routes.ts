@@ -121,27 +121,36 @@ export async function registerRoutes(
   });
 
   app.post("/api/events/:id/songs", async (req, res) => {
-    const { title, artist, url, duration } = req.body;
-    
-    // Automatic Beat Analysis (Mocked for now - generating "CSV" timings)
-    // In a real app, this would use an audio processing library
-    const syncData = [];
-    for (let i = 0; i < duration; i += 500) { // Every 500ms
-      if (Math.random() > 0.7) { // 30% chance of a blink
-        syncData.push({ time: i, effect: 'TORCH_ON', duration: 100 });
+    try {
+      const { title, artist, url, duration } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ message: "Song data is missing" });
       }
+
+      // Automatic Beat Analysis (Mocked for now - generating "CSV" timings)
+      const syncData = [];
+      const songDuration = duration || 180000;
+      for (let i = 0; i < songDuration; i += 500) { // Every 500ms
+        if (Math.random() > 0.7) { // 30% chance of a blink
+          syncData.push({ time: i, effect: 'TORCH_ON', duration: 100 });
+        }
+      }
+
+      const song = await storage.saveSong({
+        eventId: Number(req.params.id),
+        title: title || "Untitled Song",
+        artist: artist || "Unknown Artist",
+        url,
+        syncData,
+        duration: songDuration
+      });
+
+      res.status(201).json(song);
+    } catch (err) {
+      console.error("[API] Error saving song:", err);
+      res.status(500).json({ message: "Failed to save song" });
     }
-
-    const song = await storage.saveSong({
-      eventId: Number(req.params.id),
-      title,
-      artist,
-      url,
-      syncData,
-      duration
-    });
-
-    res.status(201).json(song);
   });
 
   // === WEBSOCKET ===

@@ -39,15 +39,31 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
     if (!file) return;
 
     setIsUploading(true);
-    // Mock upload - in a real app, this would upload to cloud storage
-    setTimeout(() => {
+    
+    // In a production app, we would upload to cloud storage
+    // For this prototype, we'll convert the file to a Base64 string to "upload" it
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Url = event.target?.result as string;
+      
       uploadMutation.mutate({
         title: file.name.split('.')[0],
         artist: "Unknown Artist",
-        url: URL.createObjectURL(file),
+        url: base64Url,
         duration: 180000 // 3 minutes mock
       });
-    }, 1500);
+    };
+    
+    reader.onerror = () => {
+      setIsUploading(false);
+      toast({ 
+        title: "Upload failed", 
+        description: "Could not read the audio file.", 
+        variant: "destructive" 
+      });
+    };
+    
+    reader.readAsDataURL(file);
   };
 
   const handlePlaySong = (song: Song) => {
