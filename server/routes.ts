@@ -121,12 +121,16 @@ export async function registerRoutes(
   });
 
   app.post("/api/events/:id/songs", async (req, res) => {
+    console.log(`[API] Received song upload request for event ${req.params.id}`);
     try {
       const { title, artist, url, duration } = req.body;
       
       if (!url) {
+        console.error("[API] Song data (url) is missing");
         return res.status(400).json({ message: "Song data is missing" });
       }
+
+      console.log(`[API] Saving song: ${title} (${url.length} bytes)`);
 
       // Automatic Beat Analysis (Mocked for now - generating "CSV" timings)
       const syncData = [];

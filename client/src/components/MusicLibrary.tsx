@@ -45,6 +45,7 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64Url = event.target?.result as string;
+      console.log("[Upload] File read complete, starting mutation...");
       
       uploadMutation.mutate({
         title: file.name.split('.')[0],
