@@ -57,7 +57,7 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
       }, delay);
     });
 
-    socket.on('participants_update', (stats: ParticipantStats) => {
+    socket.on('participant_update', (stats: ParticipantStats) => {
       setParticipants(stats);
     });
 
@@ -104,8 +104,8 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
     setLastEffect(payload); 
     
     // Broadcast to all participants if host
-    if (role === 'host' && socketRef.current && pin) {
-      socketRef.current.emit('host_effect', { pin, effect: payload });
+    if (role === 'host' && socketRef.current) {
+      socketRef.current.emit('host_effect', { eventId, effect: payload });
     }
   };
 

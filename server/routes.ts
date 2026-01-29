@@ -155,7 +155,7 @@ export async function registerRoutes(
   io.on("connection", (socket) => {
     console.log(`[Socket] Client connected: ${socket.id}`);
 
-    socket.on("join_event", async (data: { eventId: number; role: 'host' | 'attendee' }) => {
+    socket.on("join_event", async (data: { eventId: number; role: 'host' | 'attendee'; pin?: string }) => {
       try {
         const event = await storage.getEvent(data.eventId);
         if (!event) {
@@ -177,20 +177,31 @@ export async function registerRoutes(
         await storage.joinSession(socket.id, event.id, data.role);
         socket.emit("joined", { eventId: event.id });
         io.to(eventRoom).emit("participant_update", {
-          active: await storage.getActiveSessionCount(event.id),
-          total: await storage.getTotalSessionCount(event.id),
+          activeNow: await storage.getActiveSessionCount(event.id),
+          totalJoined: await storage.getTotalSessionCount(event.id),
         });
       } catch (err) {
         console.error("[Socket] Error joining event:", err);
       }
     });
 
-    socket.on("host_effect", (data: { eventId: number; effect: any }) => {
+    socket.on("host_effect", (data: { eventId: number; effect: any; pin?: string }) => {
       const eventRoom = `event-${data.eventId}`;
       const roomState_data = roomState.get(eventRoom);
       if (roomState_data && roomState_data.hostSocketId === socket.id) {
         roomState_data.lastEffect = data.effect;
         io.to(eventRoom).emit("effect", data.effect);
+      }
+    });
+
+    socket.on("time:sync", (data: { clientSendTime: number }, callback: (res: any) => void) => {
+      const serverReceiveTime = Date.now();
+      if (typeof callback === "function") {
+        callback({
+          clientSendTime: data.clientSendTime,
+          serverReceiveTime,
+          serverSendTime: Date.now()
+        });
       }
     });
 

@@ -53,16 +53,24 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
   const handlePlaySong = (song: Song) => {
     toast({ title: `Playing: ${song.title}`, description: "Synchronizing flashlights to beat..." });
     
+    const audio = new Audio(song.url);
+    audio.play();
+
     // Broadcast the entire sync sequence via WebSockets
-    (song.syncData as any[]).forEach((item) => {
+    const syncSequence = song.syncData as any[];
+    syncSequence.forEach((item) => {
       setTimeout(() => {
         onPlayEffect({
           type: item.effect,
           duration: item.duration,
-          startAt: Date.now() + 200
         });
       }, item.time);
     });
+
+    // Handle cleanup when audio ends
+    audio.onended = () => {
+      onPlayEffect({ type: 'TORCH_OFF' });
+    };
   };
 
   return (
