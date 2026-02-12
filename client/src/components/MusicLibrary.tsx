@@ -71,23 +71,34 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
     toast({ title: `Playing: ${song.title}`, description: "Synchronizing flashlights to beat..." });
     
     const audio = new Audio(song.url);
+    
+    // Track intervals and timeouts for cleanup
+    const timeouts: NodeJS.Timeout[] = [];
+    
+    audio.onplay = () => {
+      // Broadcast the entire sync sequence via WebSockets
+      const syncSequence = song.syncData as any[];
+      syncSequence.forEach((item) => {
+        const timeout = setTimeout(() => {
+          onPlayEffect({
+            type: item.effect,
+            duration: item.duration,
+          });
+        }, item.time);
+        timeouts.push(timeout);
+      });
+    };
+
     audio.play();
 
-    // Broadcast the entire sync sequence via WebSockets
-    const syncSequence = song.syncData as any[];
-    syncSequence.forEach((item) => {
-      setTimeout(() => {
-        onPlayEffect({
-          type: item.effect,
-          duration: item.duration,
-        });
-      }, item.time);
-    });
-
-    // Handle cleanup when audio ends
-    audio.onended = () => {
+    // Handle cleanup when audio ends or component unmounts
+    const cleanup = () => {
+      timeouts.forEach(clearTimeout);
       onPlayEffect({ type: 'TORCH_OFF' });
     };
+
+    audio.onended = cleanup;
+    audio.onpause = cleanup;
   };
 
   return (
