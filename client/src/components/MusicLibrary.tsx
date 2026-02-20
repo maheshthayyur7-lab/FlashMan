@@ -108,13 +108,25 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
           <Music className="w-5 h-5 text-primary" />
           Music Sync Library
         </h3>
-        <label className="cursor-pointer">
-          <input type="file" className="hidden" accept="audio/*" onChange={handleFileUpload} disabled={isUploading} />
-          <GlowButton variant="secondary" size="sm" className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <GlowButton 
+            variant="secondary" 
+            size="sm" 
+            className="flex items-center gap-2"
+            onClick={() => document.getElementById('song-upload-input')?.click()}
+            disabled={isUploading}
+          >
             {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             Upload Song
           </GlowButton>
-        </label>
+          <input 
+            id="song-upload-input"
+            type="file" 
+            className="hidden" 
+            accept="audio/*" 
+            onChange={handleFileUpload} 
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
