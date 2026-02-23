@@ -45,6 +45,18 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64Url = event.target?.result as string;
+      
+      // Basic size check (50MB)
+      if (base64Url.length > 50 * 1024 * 1024) {
+        setIsUploading(false);
+        toast({ 
+          title: "File too large", 
+          description: "Please upload a smaller audio file (max 50MB).", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
       console.log("[Upload] File read complete, starting mutation...");
       
       uploadMutation.mutate({
