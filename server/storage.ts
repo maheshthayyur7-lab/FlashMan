@@ -13,6 +13,7 @@ export interface IStorage {
   getTotalSessionCount(eventId: number): Promise<number>;
   saveSong(song: InsertSong): Promise<Song>;
   getSongsByEvent(eventId: number): Promise<Song[]>;
+  deleteSong(songId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -81,6 +82,10 @@ export class DatabaseStorage implements IStorage {
 
   async getSongsByEvent(eventId: number): Promise<Song[]> {
     return await db.select().from(songs).where(eq(songs.eventId, eventId));
+  }
+
+  async deleteSong(songId: number): Promise<void> {
+    await db.delete(songs).where(eq(songs.id, songId)).execute();
   }
 }
 

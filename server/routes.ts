@@ -123,23 +123,18 @@ export async function registerRoutes(
   app.post("/api/events/:id/songs", async (req, res) => {
     console.log(`[API] Received song upload request for event ${req.params.id}`);
     try {
-      const { title, artist, url, duration } = req.body;
+      const { title, artist, url, syncData, duration } = req.body;
       
       if (!url) {
         console.error("[API] Song data (url) is missing");
         return res.status(400).json({ message: "Song data is missing" });
       }
 
-      console.log(`[API] Saving song: ${title} (${url.length} bytes)`);
-
-      // Automatic Beat Analysis (Mocked for now - generating "CSV" timings)
-      const syncData = [];
-      const songDuration = duration || 180000;
-      for (let i = 0; i < songDuration; i += 500) { // Every 500ms
-        if (Math.random() > 0.7) { // 30% chance of a blink
-          syncData.push({ time: i, effect: 'TORCH_ON', duration: 100 });
-        }
+      if (!syncData || !Array.isArray(syncData)) {
+        return res.status(400).json({ message: "syncData must be a JSON array" });
       }
+
+      console.log(`[API] Saving song: ${title} with ${syncData.length} timing events`);
 
       const song = await storage.saveSong({
         eventId: Number(req.params.id),
@@ -147,13 +142,22 @@ export async function registerRoutes(
         artist: artist || "Unknown Artist",
         url,
         syncData,
-        duration: songDuration
+        duration: duration || 0,
       });
 
       res.status(201).json(song);
     } catch (err) {
       console.error("[API] Error saving song:", err);
       res.status(500).json({ message: "Failed to save song" });
+    }
+  });
+
+  app.delete("/api/events/:eventId/songs/:songId", async (req, res) => {
+    try {
+      await storage.deleteSong(Number(req.params.songId));
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete song" });
     }
   });
 
