@@ -1,11 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { EffectPayload, TimeSyncResponse } from '@shared/schema';
-
-// Simple offset calculation: 
-// We assume symmetrical latency.
-// offset = serverTime - (clientTime + latency/2)
-// correctedTime = Date.now() + offset
 
 export interface ParticipantStats {
   activeNow: number;
@@ -14,19 +9,21 @@ export interface ParticipantStats {
 
 export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attendee', pin?: string) {
   const socketRef = useRef<Socket | null>(null);
+  const timeOffsetRef = useRef(0); // Use ref — never triggers re-renders or reconnects
   const [isConnected, setIsConnected] = useState(false);
   const [latency, setLatency] = useState(0);
-  const [timeOffset, setTimeOffset] = useState(0);
   const [lastEffect, setLastEffect] = useState<EffectPayload | null>(null);
   const [participants, setParticipants] = useState<ParticipantStats>({ activeNow: 0, totalJoined: 0 });
 
   useEffect(() => {
     if (!eventId) return;
 
-    // Connect to namespace or default
     const socket = io({
       query: { eventId: eventId.toString(), role },
       transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
     });
 
     socketRef.current = socket;
@@ -34,8 +31,7 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
     socket.on('connect', () => {
       setIsConnected(true);
       console.log('Socket connected:', socket.id);
-      
-      // Notify server that we're joining the event
+
       if (eventId && pin) {
         socket.emit('join_event', { pin, eventId, role });
       }
@@ -47,13 +43,10 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
     });
 
     socket.on('effect', (payload: EffectPayload) => {
-      // Calculate delay until start
-      const now = Date.now() + timeOffset;
+      const now = Date.now() + timeOffsetRef.current;
       const delay = Math.max(0, payload.startAt - now);
-      
-      // Schedule the effect update
       setTimeout(() => {
-        setLastEffect(payload);
+        setLastEffect({ ...payload });
       }, delay);
     });
 
@@ -61,53 +54,46 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
       setParticipants(stats);
     });
 
-    // Time Sync Logic
+    // Time sync — updates ref only, never triggers re-render or reconnect
     const syncInterval = setInterval(() => {
       const start = Date.now();
       socket.emit('time:sync', { clientSendTime: start }, (response: TimeSyncResponse) => {
         const end = Date.now();
         const rtt = end - start;
         const currentLatency = rtt / 2;
-        
-        // Calculate offset
-        // Server Time = Client Time + Offset
-        // Offset = Server Time - Client Time
-        // We use the midpoint of the RTT as the "Server Time" instant matching "Client Send + Latency"
-        const serverTimeAtReceive = response.serverReceiveTime;
-        const computedOffset = serverTimeAtReceive - (start + currentLatency);
-        
+        const computedOffset = response.serverReceiveTime - (start + currentLatency);
         setLatency(currentLatency);
-        setTimeOffset(prev => (prev * 0.8) + (computedOffset * 0.2)); // Smooth it out
+        timeOffsetRef.current = timeOffsetRef.current * 0.8 + computedOffset * 0.2;
       });
     }, 2000);
 
     return () => {
       clearInterval(syncInterval);
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, [eventId, role, timeOffset, pin]);
+  }, [eventId, role, pin]); // timeOffset removed — no more reconnect storm
 
-  const emitEffect = (type: EffectPayload['type'], options: Partial<EffectPayload> = {}) => {
+  const emitEffect = useCallback((type: EffectPayload['type'], options: Partial<EffectPayload> = {}) => {
     if (!socketRef.current) return;
-    
-    // Future scheduling: 150ms in future to allow propagation
-    const now = Date.now() + timeOffset;
-    const startAt = now + 150; 
+
+    const now = Date.now() + timeOffsetRef.current;
+    const startAt = now + 150;
 
     const payload: EffectPayload = {
       type,
       startAt,
-      ...options
+      ...options,
     };
-    
-    // Immediate local effect (for both host and attendee)
-    setLastEffect(payload); 
-    
-    // Broadcast to all participants if host
+
+    // Apply locally immediately
+    setLastEffect({ ...payload });
+
+    // Broadcast if host
     if (role === 'host' && socketRef.current) {
       socketRef.current.emit('host_effect', { eventId, effect: payload });
     }
-  };
+  }, [eventId, role]);
 
-  return { isConnected, latency, timeOffset, lastEffect, emitEffect, participants };
+  return { isConnected, latency, timeOffset: timeOffsetRef.current, lastEffect, emitEffect, participants };
 }

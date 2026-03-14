@@ -49,20 +49,22 @@ export default function AttendeeMode() {
     const runEffect = async () => {
       const { type, duration = 5000, frequency = 5, color = '#FFFFFF' } = lastEffect;
 
+      // Torch available = permission granted AND hardware torch supported
+      const canUseTorch = hasPermission && isSupported;
+
       if (type === 'TORCH_OFF') {
-        toggle(false);
+        if (canUseTorch) toggle(false);
         setScreenFlashColor(null);
         return;
       }
 
       if (type === 'TORCH_ON') {
-        if (hasPermission) toggle(true);
+        if (canUseTorch) toggle(true);
         else setScreenFlashColor(color);
       }
 
       if (type === 'PULSE') {
-        // Single pulse
-        if (hasPermission) {
+        if (canUseTorch) {
           toggle(true);
           setTimeout(() => toggle(false), 200);
         } else {
@@ -72,23 +74,20 @@ export default function AttendeeMode() {
       }
 
       if (type === 'STROBE') {
-        const period = 1000 / frequency; // ms per cycle
-        const dutyCycle = 0.5; // 50% on
-        
+        const period = 1000 / frequency;
         let state = false;
         intervalId = setInterval(() => {
           state = !state;
-          if (hasPermission) {
+          if (canUseTorch) {
             toggle(state);
           } else {
             setScreenFlashColor(state ? color : null);
           }
-        }, period * dutyCycle); // Simplified strobe logic
-        
-        // Auto stop after duration
+        }, period * 0.5);
+
         setTimeout(() => {
           clearInterval(intervalId);
-          toggle(false);
+          if (canUseTorch) toggle(false);
           setScreenFlashColor(null);
         }, duration);
       }
@@ -99,7 +98,7 @@ export default function AttendeeMode() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [lastEffect, hasPermission, toggle]);
+  }, [lastEffect, hasPermission, isSupported, toggle]);
 
   // Clean exit
   const handleExit = () => {

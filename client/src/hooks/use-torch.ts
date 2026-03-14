@@ -28,10 +28,13 @@ export function useTorch() {
         console.log('[Torch] Track capabilities:', capabilities);
         
         if (!('torch' in capabilities)) {
-          console.warn('[Torch] Torch not in capabilities');
+          console.warn('[Torch] Torch not in capabilities — using screen flash fallback');
           setIsSupported(false);
           track.stop();
-          return false;
+          stream.getTracks().forEach(t => t.stop());
+          // Still mark permission granted so attendee enters the show (screen flash will be used)
+          setHasPermission(true);
+          return true;
         }
       } catch (err) {
         console.log('[Torch] Could not check capabilities, assuming torch is available:', err);
