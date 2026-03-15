@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "bKwwmBDQ7WU9P-lACQY7A"
+uri = "file://FlashMan_Product_Document.pdf"
+type = "pdf"
+title = "FlashMan - Complete Product Document (21 Pages)"
