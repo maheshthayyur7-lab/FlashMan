@@ -1,7 +1,7 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Music, Upload, Play, Trash2, Loader2, Music2, Plus, FileJson, FileAudio, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Music, Upload, Play, Square, Trash2, Loader2, Music2, Plus, FileJson, FileAudio, X, ChevronDown, ChevronUp } from "lucide-react";
 import { GlowButton } from "./GlowButton";
 import { useToast } from "@/hooks/use-toast";
 import { type Song } from "@shared/schema";
@@ -35,6 +35,9 @@ function createSection(): Section {
 
 export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
   const [sections, setSections] = useState<Section[]>([createSection()]);
+  const [playingSongId, setPlayingSongId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -163,11 +166,28 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
     }
   };
 
+  const stopCurrentSong = () => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+    if (audioRef.current) {
+      audioRef.current.onended = null;
+      audioRef.current.onpause = null;
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    onPlayEffect({ type: "TORCH_OFF" });
+    setPlayingSongId(null);
+  };
+
   const handlePlaySong = (song: Song) => {
+    // Stop any currently playing song first
+    stopCurrentSong();
+
     toast({ title: `Playing: ${song.title}`, description: "Synchronizing flashlights to timing data..." });
 
     const audio = new Audio(song.url);
-    const timeouts: NodeJS.Timeout[] = [];
+    audioRef.current = audio;
+    setPlayingSongId(song.id);
 
     audio.onplay = () => {
       const syncData = song.syncData as Array<{ time: number; action: "on" | "off" }>;
@@ -178,19 +198,21 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
             duration: 200,
           });
         }, item.time);
-        timeouts.push(timeout);
+        timeoutsRef.current.push(timeout);
       });
     };
 
-    audio.play();
-
     const cleanup = () => {
-      timeouts.forEach(clearTimeout);
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
       onPlayEffect({ type: "TORCH_OFF" });
+      setPlayingSongId(null);
+      audioRef.current = null;
     };
 
     audio.onended = cleanup;
     audio.onpause = cleanup;
+    audio.play();
   };
 
   return (
@@ -335,20 +357,33 @@ export function MusicLibrary({ eventId, onPlayEffect }: MusicLibraryProps) {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <GlowButton
-                    size="sm"
-                    variant="primary"
-                    onClick={() => handlePlaySong(song)}
-                    data-testid={`button-play-${song.id}`}
-                  >
-                    <Play className="w-4 h-4" />
-                  </GlowButton>
+                  {playingSongId === song.id ? (
+                    <GlowButton
+                      size="sm"
+                      variant="danger"
+                      onClick={stopCurrentSong}
+                      data-testid={`button-stop-${song.id}`}
+                      className="flex items-center gap-1 px-3"
+                    >
+                      <Square className="w-3 h-3 fill-current" />
+                      Stop
+                    </GlowButton>
+                  ) : (
+                    <GlowButton
+                      size="sm"
+                      variant="primary"
+                      onClick={() => handlePlaySong(song)}
+                      data-testid={`button-play-${song.id}`}
+                    >
+                      <Play className="w-4 h-4" />
+                    </GlowButton>
+                  )}
                   <GlowButton
                     size="sm"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10"
                     onClick={() => deleteMutation.mutate(song.id)}
-                    disabled={deleteMutation.isPending}
+                    disabled={deleteMutation.isPending || playingSongId === song.id}
                     data-testid={`button-delete-${song.id}`}
                   >
                     <Trash2 className="w-4 h-4" />
