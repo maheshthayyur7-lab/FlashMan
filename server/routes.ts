@@ -211,6 +211,14 @@ export async function registerRoutes(
       }
     });
 
+    socket.on("host_now_playing", (data: { eventId: number; title: string | null }) => {
+      const eventRoom = `event-${data.eventId}`;
+      const roomState_data = roomState.get(eventRoom);
+      if (roomState_data && roomState_data.hostSocketId === socket.id) {
+        io.to(eventRoom).emit("now_playing", { title: data.title });
+      }
+    });
+
     socket.on("time:sync", (data: { clientSendTime: number }, callback: (res: any) => void) => {
       const serverReceiveTime = Date.now();
       if (typeof callback === "function") {

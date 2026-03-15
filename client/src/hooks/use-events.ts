@@ -4,20 +4,15 @@ import { useLocation } from "wouter";
 import { type InsertEvent } from "@shared/schema";
 
 export function useCreateEvent() {
-  const [, setLocation] = useLocation();
-  
   return useMutation({
     mutationFn: async (data: InsertEvent) => {
-      // Validate with Zod schema from routes
       const validated = api.events.create.input.parse(data);
-      
       const res = await fetch(api.events.create.path, {
         method: api.events.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
         credentials: "include",
       });
-
       if (!res.ok) {
         if (res.status === 400) {
           const error = api.events.create.responses[400].parse(await res.json());
@@ -25,12 +20,7 @@ export function useCreateEvent() {
         }
         throw new Error("Failed to create event");
       }
-
       return api.events.create.responses[201].parse(await res.json());
-    },
-    onSuccess: (event) => {
-      // Navigate to host dashboard using Host ID (UUID)
-      setLocation(`/host/${event.hostId}`);
     },
   });
 }

@@ -9,10 +9,11 @@ export interface ParticipantStats {
 
 export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attendee', pin?: string) {
   const socketRef = useRef<Socket | null>(null);
-  const timeOffsetRef = useRef(0); // Use ref — never triggers re-renders or reconnects
+  const timeOffsetRef = useRef(0);
   const [isConnected, setIsConnected] = useState(false);
   const [latency, setLatency] = useState(0);
   const [lastEffect, setLastEffect] = useState<EffectPayload | null>(null);
+  const [nowPlaying, setNowPlaying] = useState<string | null>(null);
   const [participants, setParticipants] = useState<ParticipantStats>({ activeNow: 0, totalJoined: 0 });
 
   useEffect(() => {
@@ -31,7 +32,6 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
     socket.on('connect', () => {
       setIsConnected(true);
       console.log('Socket connected:', socket.id);
-
       if (eventId && pin) {
         socket.emit('join_event', { pin, eventId, role });
       }
@@ -50,11 +50,14 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
       }, delay);
     });
 
+    socket.on('now_playing', (data: { title: string | null }) => {
+      setNowPlaying(data.title);
+    });
+
     socket.on('participant_update', (stats: ParticipantStats) => {
       setParticipants(stats);
     });
 
-    // Time sync — updates ref only, never triggers re-render or reconnect
     const syncInterval = setInterval(() => {
       const start = Date.now();
       socket.emit('time:sync', { clientSendTime: start }, (response: TimeSyncResponse) => {
@@ -72,28 +75,24 @@ export function useSocket(eventId?: number, role: 'host' | 'attendee' = 'attende
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [eventId, role, pin]); // timeOffset removed — no more reconnect storm
+  }, [eventId, role, pin]);
 
   const emitEffect = useCallback((type: EffectPayload['type'], options: Partial<EffectPayload> = {}) => {
     if (!socketRef.current) return;
-
     const now = Date.now() + timeOffsetRef.current;
     const startAt = now + 150;
-
-    const payload: EffectPayload = {
-      type,
-      startAt,
-      ...options,
-    };
-
-    // Apply locally immediately
+    const payload: EffectPayload = { type, startAt, ...options };
     setLastEffect({ ...payload });
-
-    // Broadcast if host
     if (role === 'host' && socketRef.current) {
       socketRef.current.emit('host_effect', { eventId, effect: payload });
     }
   }, [eventId, role]);
 
-  return { isConnected, latency, timeOffset: timeOffsetRef.current, lastEffect, emitEffect, participants };
+  const emitNowPlaying = useCallback((title: string | null) => {
+    if (!socketRef.current || role !== 'host') return;
+    socketRef.current.emit('host_now_playing', { eventId, title });
+    setNowPlaying(title);
+  }, [eventId, role]);
+
+  return { isConnected, latency, timeOffset: timeOffsetRef.current, lastEffect, nowPlaying, emitEffect, emitNowPlaying, participants };
 }

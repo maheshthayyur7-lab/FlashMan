@@ -5,7 +5,7 @@ import { useTorch } from "@/hooks/use-torch";
 import { useEvent } from "@/hooks/use-events";
 import { GlowButton } from "@/components/GlowButton";
 import { StatusIndicator } from "@/components/StatusIndicator";
-import { Lock, Unlock, Zap, AlertTriangle, LogOut } from "lucide-react";
+import { Lock, Zap, AlertTriangle, LogOut, Music } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AttendeeMode() {
@@ -14,7 +14,7 @@ export default function AttendeeMode() {
   const [, setLocation] = useLocation();
   
   const { data: event, isLoading: eventLoading } = useEvent(eventId);
-  const { isConnected, latency, lastEffect } = useSocket(eventId, 'attendee', event?.pin);
+  const { isConnected, latency, lastEffect, nowPlaying } = useSocket(eventId, 'attendee', event?.pin);
   const { requestPermission, hasPermission, toggle, isSupported } = useTorch();
   
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
@@ -200,6 +200,26 @@ export default function AttendeeMode() {
             Keep this screen open. Your phone is now part of the show.
           </p>
         </div>
+
+        {/* Now Playing Banner */}
+        <AnimatePresence>
+          {nowPlaying && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 backdrop-blur-sm"
+            >
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <Music className="w-4 h-4 text-primary animate-pulse" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-white/40 uppercase tracking-widest">Now Playing</p>
+                <p className="text-sm font-bold text-white truncate max-w-[180px]">{nowPlaying}</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {!isSupported && (
           <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-200">
